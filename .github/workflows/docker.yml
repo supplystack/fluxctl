@@ -1,0 +1,28 @@
+name: Docker
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - '*'
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Build image & push
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+          [ "$VERSION" == "main" ] && VERSION=latest
+          docker build -t ghcr.io/supplystack/fluxctl:$VERSION . 
+          docker push ghcr.io/supplystack/fluxctl:$VERSION
+          if [ "$VERSION" != "latest" ] ; then
+            docker tag ghcr.io/supplystack/fluxctl:$VERSION ghcr.io/supplystack/fluxctl:latest
+            docker push ghcr.io/supplystack/fluxctl:latest
+          fi
